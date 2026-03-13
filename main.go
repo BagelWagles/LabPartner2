@@ -2,12 +2,14 @@ package main
 
 import (
 	"fmt"
+	"os"
 )
 
 // "github.com/gocolly/colly"
 
 var UniversityList []University
 var Wikilinks []string
+var SeedLinks []string
 
 func main() {
 	// c := colly.NewCollector(
@@ -19,13 +21,18 @@ func main() {
 
 	GenerateUniversities()
 
-	test := FindUrls()
-	goodLinks := TestLinks(test)
-	CheckRobotTxT(goodLinks)
-
+	// test := FindUrls()
+	// goodLinks := TestLinks(test)
+	// SeedLinks = CheckRobotTxT(goodLinks)
+	Save(SeedLinks)
 	fmt.Println("Done checking websites")
 	// var r bufio.Reader
 	//I am going to test If I can get the links by guess most of their links
 	//Sample: https://www.harvard.edu/
+
+}
+func Save(s []string) {
+	//save file address: //SaveFiles//Save
+	file, err := os.Open("//SaveFiles//Save")
 
 }
