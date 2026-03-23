@@ -3,11 +3,12 @@ package main
 import (
 	// cls"fmt"
 
-	"fmt"
+	// "fmt"
 	"net/http"
 	"time"
 )
 
+var TestTime int
 var WorkingLinks []string
 
 func TestLinks(links map[string]string) []string {
@@ -21,7 +22,7 @@ func TestLinks(links map[string]string) []string {
 				// fmt.Println("This link doesn't work: ", link)
 			}
 			if resp != nil {
-				fmt.Println(":) -> ", link)
+				// fmt.Println(":) -> ", link)
 				WorkingLinks = append(WorkingLinks, link)
 
 			}
@@ -29,10 +30,9 @@ func TestLinks(links map[string]string) []string {
 		}()
 
 	}
-
-	time.Sleep(10 * time.Second)
-	fmt.Println("Terminated early")
-
+	// fmt.Println("Starting Timer")
+	time.Sleep(time.Duration(TestTime) * time.Second)
+	// fmt.Println("Terminated early")
 	return WorkingLinks
 
 }

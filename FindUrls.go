@@ -13,6 +13,7 @@ func FindUrls() map[string]string {
 		title := strings.Trim(uni.university_Name, "University")
 		title = strings.Trim(title, "College")
 		title = strings.Trim(title, "  ")
+		title = strings.Trim(title, "of")
 		title = strings.ReplaceAll(title, " .edu", ".edu")
 		title = strings.ReplaceAll(title, " ", "_")
 		title = strings.ToLower(title)
