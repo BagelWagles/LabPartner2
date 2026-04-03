@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"strings"
-	"sync"
 
 	"github.com/gocolly/colly/v2"
 )
@@ -13,108 +12,164 @@ import (
 var UniversityList []University
 var Wikilinks []string
 var SeedLinks []string
+var SearchedSites map[string]string
 var searchDepth int = 5
 
-// var searchTerms []string = []string{"center", "graduate", "branch", "research", "lab"}
-var searchTerms []string = []string{"faculty", "staff"}
-
-// var badTerms []string = []string{"fellowship", "syllabus", "collab", "ethic", "facebook", "news", "compliance", "section", "guides", "development", "patient", "visitor", "board"}
-var badTerms []string = []string{}
-var scoreMin int = 0
-
 func main() {
+	// SearchedSites := make(map[string]string)
 
-	GenerateUniversities()
-
+	// GenerateUniversities()
+	// TestTime = 10
 	// test := FindUrls()
 	// goodLinks := TestLinks(test)
 	// SeedLinks = CheckRobotTxT(goodLinks)
+	// for _, val := range SeedLinks {
+	// 	fmt.Println(val)
+	// }
+	// fmt.Println("----------")
+	crawlPage("https://drexel.edu/medicine/about/departments/pharmacology-physiology/research/barker-lab/")
+	// result2 := returnLinks(result1[0].NewLink)
+	//https://www.uic.edu/
+	// test := []string{"https://www.purdue.edu/"}
+	// test := []string{"https://www.uic.edu/"}
+	// fmt.Println("Result 1:")
+	// result := crawlUic(test, 0, 2, []string{"school", "college", "departments", "of"}, []string{"paying", "for"}, SearchedSites)
+	// fmt.Println("--------------")
+	// fmt.Println("Result 2:")
+	// // fmt.Println(result)
 
-	// CrawlSeedLink(SeedLinks[0])
+	// result2 := crawlUic(result, 0, 4, []string{"research", "lab", "departments", "program", "center"}, []string{"news"}, SearchedSites)
+	// crawlUic(result2, 0, 4, []string{"professor,"principal investigator;"}, []string{}, SearchedSites)
 
-	// CrawlSeedList(SeedLinks)
-
-	CrawlSeedLink("https://www.uic.edu/")
-
-	fmt.Println("Done checking websites")
+	// fmt.Println("Done checking websites")
 
 }
 
-func CrawlSeedLink(seedLink string) {
+func crawlLinks(seedLinks []string, i int, maxI int, search []string, remove []string, searched map[string]string) []string {
+	// fmt.Println(seedLinks)
+	var result []string
 
+	if i == maxI {
+		return nil
+	}
+	// var wg sync.WaitGroup
+	for _, link := range seedLinks {
+		// wg.Add(1)
+		// go func() {
+		// 	defer wg.Done()
+
+		links := returnLinks(link, searched)
+		Results := SortNewLinks(links, search, remove, 0)
+		for _, newLink := range Results {
+			// resp, err := http.Get(newLink.NewLink)
+
+			// if err != nil {
+			// 	fmt.Println(err)
+			// }
+
+			// if resp.StatusCode >= 200 && resp.StatusCode <= 299 /*&& 1000 > unsafe.Sizeof(resp.Body)*/ {
+
+			// fmt.Println(resp.StatusCode)
+
+			result = append(result, newLink.NewLink)
+			// }
+			// fmt.Println(newLink)
+			// defer resp.Body.Close()
+		}
+		// }()
+
+	}
+	// wg.Wait()
+	return append(result, crawlLinks(result, i+1, maxI, search, remove, searched)...)
+}
+func crawlPage(url string) {
 	c := colly.NewCollector()
-	c.AllowURLRevisit = true
-	c.MaxDepth = 100
-	var Pagelinks []string
 
-	// Words to look for: Research, Lab, Study, Medicine,
-	c.OnHTML("a[href]", func(e *colly.HTMLElement) {
-		// loweredText := strings.ToLower(e.Attr("href"))
-		loweredText := strings.Trim(strings.ToLower(e.Attr("href")), seedLink)
-		searched := false
-		hasRemoveTerms := false
-		hasSearchTerm := false
-		score := 0
-		repeated := false
-		for _, val := range Pagelinks {
-			if strings.Contains(loweredText, val) {
-				// fmt.Println("Removed: ", remove)
-				repeated = true
-			}
-		}
-		for _, remove := range badTerms {
-			if strings.Contains(loweredText, remove) {
-				// fmt.Println("Removed: ", remove)
-				hasRemoveTerms = true
-			}
-		}
-		for i, val := range searchTerms {
-			if strings.Contains(loweredText, val) {
-				score += i
-			}
+	defer c.Visit(url)
 
+	c.OnResponse(func(e *colly.Response) {
+		// fmt.Println(string(e.Body))
+		count := strings.Count(string(e.Body), "Principal Investigator")
+		if count > 0 {
+			fmt.Printf("%v is likely a Lab as Principle Investigator is mentioned %v times", url, count)
 		}
-		if strings.HasSuffix(loweredText, "lab") {
-			score = 100
-		}
-		// fmt.Printf("\nsearched:%t, hasRemoveTerms: %t, hasSearchTerms: %t, Link:%s", searched, hasRemoveTerms, hasSearchTerm, loweredText)
-		if !repeated && !searched && !hasRemoveTerms && hasSearchTerm {
-			searched = true
-			newlink, _ := strings.CutPrefix(e.Attr("href"), "/")
-			Pagelinks = append(Pagelinks, newlink)
-			fmt.Printf("score:%d, Site: %s \n", score, newlink)
-
-			if strings.Contains(newlink, "https://") {
-				c.Visit(newlink)
-				fmt.Printf("score:%d, Site: %s \n", score, newlink)
-			} else {
-
-				c.Visit(seedLink + newlink)
-				fmt.Printf("score:%d, Site: %s \n", score, seedLink+newlink)
-			}
-		}
-		// if score == 100 {
-
-		// }
 
 	})
-
-	// c.OnRequest(func(r *colly.Request) {
-	// 	// fmt.Println("Visiting", r.URL.String())
-	// })
-
-	c.Visit(seedLink)
 }
 
-func CrawlSeedList(seedLinks []string) {
-	var wg sync.WaitGroup
+/*
+New Design Idea...
+1.Seed links
+2.Check if pages are Labs ie(contains the word Principle Investigator)
+2.5. If page is a Lab site add to final Lab links array
+3.If not Get all links that look like could help find the labs ie(link or context contains(lab,research,program,department))
+4.Get rid of links that contain(News,blog, other stuff.)
 
-	for _, val := range seedLinks {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			CrawlSeedLink(val)
-		}()
-	}
-	wg.Wait()
+*/
+
+/*
+Need to make manager Function that manages running through school sites.
+Inputs: SeedLinks
+Outputs: LabLink
+*/
+func CrawlUni(seedLink string) []string {
+	//Anouncing Start of function
+	fmt.Printf("Searching: %v", seedLink)
+
+	//function Variables
+	var labLinks []string
+	var search bool
+	labKeyTerms := []string{"principle investigator", "members", "lab", "publish"}
+	searchKeyTerms := []string{"lab", "department", "center", "program"}
+	badSearchTerms := []string{"news", "ethic", "saftey", "grant", "compliance"}
+	var newLinks []string
+	var siteScore int
+	var linkScore int
+
+	//Colly Scrapper
+	c := colly.NewCollector()
+
+	// Turns out colly has a .HasVisited() function no map need of searchlinks
+
+	//This Function is called whenever a site is visted.
+	//Goal: Check if lab and add to list,else search links
+	c.OnResponse(func(e *colly.Response) {
+		search = true
+		newLinks = nil
+		for _, term := range labKeyTerms {
+			if strings.Contains(string(e.Body), term) {
+				siteScore++
+			}
+		}
+		for _, term := range labKeyTerms {
+			if strings.Contains(string(e.Body), term) {
+				siteScore--
+			}
+		}
+		if siteScore > 1 {
+			//For suspected Labs we save link, and dont search links.
+			labLinks = append(labLinks, (e.Request.URL.RawPath))
+			search = false
+		}
+	})
+
+	c.OnHTML("a[href]", func(e *colly.HTMLElement) {
+		for _, term := range searchKeyTerms {
+			if strings.Contains(e.Attr("href"), term) || strings.Contains(e.Request.AbsoluteURL(seedLink), term) {
+				linkScore++
+			}
+		}
+		for _, term := range badSearchTerms {
+			if strings.Contains(e.Attr("href"), term) || strings.Contains(e.Request.AbsoluteURL(seedLink), term) {
+				linkScore--
+			}
+		}
+		if linkScore > 1 {
+			newLinks = append(newLinks, e.Attr("href"))
+
+		}
+	})
+
+	//returning LabsLink
+	return labLinks
 }
